@@ -1,0 +1,106 @@
+{
+  "name": "2 - Send due follow-ups (every 15 min)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "minutes", "minutesInterval": 15 }]
+        }
+      },
+      "id": "b2e1d2c3-0002-4b00-8000-000000000001",
+      "name": "Every 15 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://api:8080/api/automation/followups/due",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "X-Api-Key", "value": "change-me-api-key" }]
+        },
+        "options": {}
+      },
+      "id": "b2e1d2c3-0002-4b00-8000-000000000002",
+      "name": "Get due follow-ups",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-followup-id",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": { "type": "number", "operation": "exists", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b2e1d2c3-0002-4b00-8000-000000000003",
+      "name": "Anything due?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [520, 0]
+    },
+    {
+      "parameters": {
+        "fromEmail": "replace-me@example.com",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.body }}",
+        "options": {}
+      },
+      "id": "b2e1d2c3-0002-4b00-8000-000000000004",
+      "name": "Send follow-up email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [780, -80]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://api:8080/api/automation/followups/{{ $('Get due follow-ups').item.json.id }}/sent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "X-Api-Key", "value": "change-me-api-key" }]
+        },
+        "options": {}
+      },
+      "id": "b2e1d2c3-0002-4b00-8000-000000000005",
+      "name": "Mark as sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1040, -80]
+    }
+  ],
+  "connections": {
+    "Every 15 minutes": {
+      "main": [[{ "node": "Get due follow-ups", "type": "main", "index": 0 }]]
+    },
+    "Get due follow-ups": {
+      "main": [[{ "node": "Anything due?", "type": "main", "index": 0 }]]
+    },
+    "Anything due?": {
+      "main": [[{ "node": "Send follow-up email", "type": "main", "index": 0 }], []]
+    },
+    "Send follow-up email": {
+      "main": [[{ "node": "Mark as sent", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

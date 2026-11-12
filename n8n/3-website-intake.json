@@ -1,0 +1,43 @@
+{
+  "name": "3 - Website form to inquiry (public webhook)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "website-lead",
+        "responseMode": "lastNode",
+        "options": { "allowedOrigins": "*" }
+      },
+      "id": "c3d2e3f4-0003-4c00-8000-000000000001",
+      "name": "Website form",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8080/api/automation/inquiries",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "X-Api-Key", "value": "change-me-api-key" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ customerName: $json.body.name, customerEmail: $json.body.email, subject: $json.body.subject, message: $json.body.message, channel: 'Website' }) }}",
+        "options": {}
+      },
+      "id": "c3d2e3f4-0003-4c00-8000-000000000002",
+      "name": "Create inquiry in API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [280, 0]
+    }
+  ],
+  "connections": {
+    "Website form": {
+      "main": [[{ "node": "Create inquiry in API", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

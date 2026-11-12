@@ -1,0 +1,56 @@
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    env_file:
+      - .env
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${SQL_SA_PASSWORD:?Set SQL_SA_PASSWORD in .env}
+    volumes:
+      - sqldata:/var/opt/mssql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - '/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -Q "SELECT 1" || exit 1'
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  api:
+    build: ./backend/BizAssistant.Api
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=BizAssistant;User Id=sa;Password=${SQL_SA_PASSWORD:?Set SQL_SA_PASSWORD in .env};TrustServerCertificate=True"
+      Llm__ApiKey: ${LLM_API_KEY:?Set LLM_API_KEY in .env}
+      Llm__Model: ${LLM_MODEL:-anthropic/claude-sonnet-4.5}
+      Llm__Provider: ${LLM_PROVIDER:-OpenAI}
+      Llm__BaseUrl: ${LLM_BASE_URL:-https://openrouter.ai/api/v1}
+      Auth__Username: ${AUTH_USERNAME:?Set AUTH_USERNAME in .env}
+      Auth__Password: ${AUTH_PASSWORD:?Set AUTH_PASSWORD in .env}
+      Auth__JwtKey: ${AUTH_JWT_KEY:?Set AUTH_JWT_KEY in .env}
+      Automation__ApiKey: ${AUTOMATION_API_KEY:?Set AUTOMATION_API_KEY in .env}
+      N8n__BaseUrl: http://n8n:5678
+      N8n__DryRun: "false"
+      Cors__Origins__0: ${FRONTEND_URL:-http://localhost:5173}
+    ports:
+      - "127.0.0.1:5080:8080"
+
+  n8n:
+    image: n8nio/n8n:latest
+    environment:
+      GENERIC_TIMEZONE: ${TZ:-Asia/Manila}
+      TZ: ${TZ:-Asia/Manila}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?Set N8N_ENCRYPTION_KEY in .env}
+    ports:
+      - "127.0.0.1:5678:5678"
+    volumes:
+      - n8ndata:/home/node/.n8n
+
+volumes:
+  sqldata:
+  n8ndata:
